@@ -1,4 +1,7 @@
+import json
+
 from aiohttp import ClientResponse
+from cachetools import TTLCache
 from starlette.applications import Starlette
 from starlette.responses import Response as ServerResponse
 from starlette.routing import Route
@@ -17,18 +20,39 @@ def _clean_query_params(query_params, skip_list):
     return query_params
 
 
+def _get_cache_key(path, query_params):
+    return json.dumps((path, query_params))
+
+
 async def serve(request):
+    path = request.path_params['rest_of_path']
+    query_params = _clean_query_params(
+        request.query_params, request.app.skip_list
+    )
+
+    cache = request.app.cache
+    if cache is not None:
+        key = _get_cache_key(path, query_params)
+        response_data = cache.get(key)
+        if response_data is not None:
+            return ServerResponse(**response_data)
+
     client_response: ClientResponse = await request.app.remote_service_client.get(
-        request.path_params['rest_of_path'],
-        _clean_query_params(request.query_params, request.app.skip_list),
+        path,
+        query_params,
     )
 
     async with client_response:
-        return ServerResponse(
+        response_data = dict(
             content=await client_response.read(),
             status_code=client_response.status,
             headers=dict(client_response.headers),
         )
+        if cache is not None:
+            key = _get_cache_key(path, query_params)
+            cache[key] = response_data
+
+        return ServerResponse(**response_data)
 
 routes = [
     Route("/{rest_of_path:path}", endpoint=serve, methods=['GET']),
@@ -42,5 +66,6 @@ def app_factory(*args, **kwargs):
     app = Starlette(routes=routes)
     app.remote_service_client = Client(args.url)
     app.skip_list = args.skip
+    app.cache = TTLCache(256, ttl=args.cache) if args.cache is not None else None
 
     return app

@@ -7,6 +7,7 @@ name = "pypi"
 uvicorn = {extras = ["standard"], version = "*"}
 aiohttp = {extras = ["speedups"], version = "*"}
 starlette = "*"
+cachetools = "*"
 
 [dev-packages]
 

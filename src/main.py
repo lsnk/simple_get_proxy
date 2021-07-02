@@ -16,6 +16,11 @@ parser.add_argument(
     metavar='SKIP', type=comma_separated, default=[],
     help='Comma-separated list of GET params to skip while proxying.'
 )
+parser.add_argument(
+    '--cache',
+    metavar='CACHE', type=int, default=None,
+    help='Cache duration in seconds.'
+)
 
 
 if __name__ == "__main__":
