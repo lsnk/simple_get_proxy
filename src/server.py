@@ -43,10 +43,13 @@ async def serve(request):
     )
 
     async with client_response:
+        response_headers = dict(client_response.headers)
+        response_headers.pop('Content-Encoding', None)  # ignoring encoding headers
+
         response_data = dict(
             content=await client_response.read(),
             status_code=client_response.status,
-            headers=dict(client_response.headers),
+            headers=response_headers,
         )
         if cache is not None:
             key = _get_cache_key(path, query_params)
