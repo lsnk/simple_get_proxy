@@ -44,7 +44,10 @@ async def serve(request):
 
     async with client_response:
         response_headers = dict(client_response.headers)
-        response_headers.pop('Content-Encoding', None)  # ignoring encoding headers
+
+        # ignoring some headers
+        response_headers.pop('Content-Encoding', None)
+        response_headers.pop('Content-Length', None)
 
         response_data = dict(
             content=await client_response.read(),
