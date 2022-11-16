@@ -10,12 +10,15 @@ pip install pipenv
 pipenv install --deploy
 
 cd src
-python main.py <url>
+python main.py <url> ...
 ```
 
 ### Docker deployment
 
-...
+```
+docker build -t simple_get_proxy .
+docker run -p <local port>:8000 simple_get_proxy <url> ...
+```
 
 ### Additional parameters
 
