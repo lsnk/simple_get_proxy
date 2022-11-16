@@ -8,13 +8,15 @@ def comma_separated(string):
 
 
 parser = argparse.ArgumentParser(description='Simple GET proxy.')
+
 parser.add_argument(
     'url', metavar='URL', type=str,
     help='an URL to proxy requests')
+
 parser.add_argument(
     '--skip',
     metavar='SKIP', type=comma_separated, default=[],
-    help='Comma-separated list of GET params to skip while proxying.'
+    help='Comma-separated list of GET params to exclude from requests.'
 )
 parser.add_argument(
     '--cache',
