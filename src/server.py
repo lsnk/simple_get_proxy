@@ -1,3 +1,4 @@
+import asyncio
 import json
 
 from aiohttp import ClientResponse
@@ -42,23 +43,29 @@ async def serve(request):
         query_params,
     )
 
-    async with client_response:
-        response_headers = dict(client_response.headers)
+    for _ in range(3):
 
-        # ignoring some headers
-        response_headers.pop('Content-Encoding', None)
-        response_headers.pop('Content-Length', None)
+        async with client_response:
+            if client_response.status == 429:
+                await asyncio.sleep(5)
+                continue
 
-        response_data = dict(
-            content=await client_response.read(),
-            status_code=client_response.status,
-            headers=response_headers,
-        )
-        if cache is not None:
-            key = _get_cache_key(path, query_params)
-            cache[key] = response_data
+            response_headers = dict(client_response.headers)
 
-        return ServerResponse(**response_data)
+            # ignoring some headers
+            response_headers.pop('Content-Encoding', None)
+            response_headers.pop('Content-Length', None)
+
+            response_data = dict(
+                content=await client_response.read(),
+                status_code=client_response.status,
+                headers=response_headers,
+            )
+            if cache is not None:
+                key = _get_cache_key(path, query_params)
+                cache[key] = response_data
+
+            return ServerResponse(**response_data)
 
 routes = [
     Route("/{rest_of_path:path}", endpoint=serve, methods=['GET']),
