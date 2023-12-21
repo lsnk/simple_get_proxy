@@ -22,7 +22,7 @@ def _clean_query_params(query_params, skip_list):
     return query_params
 
 
-@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=10))
+@retry(stop=stop_after_attempt(10), wait=wait_exponential(multiplier=1, min=5, max=60))
 async def _get_response_data(request, path, query_params):
     client_response: ClientResponse = await request.app.remote_service_client.get(
         path,
