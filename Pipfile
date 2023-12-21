@@ -8,8 +8,9 @@ uvicorn = {extras = ["standard"], version = "*"}
 aiohttp = {extras = ["speedups"], version = "*"}
 starlette = "*"
 cachetools = "*"
+tenacity = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.10"
+python_version = "3.11"

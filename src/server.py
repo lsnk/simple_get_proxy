@@ -6,6 +6,7 @@ from cachetools import TTLCache
 from starlette.applications import Starlette
 from starlette.responses import Response as ServerResponse
 from starlette.routing import Route
+from tenacity import retry, stop_after_attempt, wait_exponential
 
 from client import Client
 
@@ -19,6 +20,29 @@ def _clean_query_params(query_params, skip_list):
         query_params.pop(param_name, None)
 
     return query_params
+
+
+@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=10))
+async def _get_response_data(request, path, query_params):
+    client_response: ClientResponse = await request.app.remote_service_client.get(
+        path,
+        query_params,
+    )
+
+    async with client_response:
+        client_response.raise_for_status()
+
+        response_headers = dict(client_response.headers)
+
+        # ignoring some headers
+        response_headers.pop('Content-Encoding', None)
+        response_headers.pop('Content-Length', None)
+
+        return dict(
+            content=await client_response.read(),
+            status_code=client_response.status,
+            headers=response_headers,
+        )
 
 
 def _get_cache_key(path, query_params):
@@ -38,34 +62,11 @@ async def serve(request):
         if response_data is not None:
             return ServerResponse(**response_data)
 
-    client_response: ClientResponse = await request.app.remote_service_client.get(
-        path,
-        query_params,
-    )
+    response_data = await _get_response_data(request, path, query_params)
+    key = _get_cache_key(path, query_params)
+    cache[key] = response_data
 
-    for _ in range(3):
-
-        async with client_response:
-            if client_response.status in (429, 500):
-                await asyncio.sleep(5)
-                continue
-
-            response_headers = dict(client_response.headers)
-
-            # ignoring some headers
-            response_headers.pop('Content-Encoding', None)
-            response_headers.pop('Content-Length', None)
-
-            response_data = dict(
-                content=await client_response.read(),
-                status_code=client_response.status,
-                headers=response_headers,
-            )
-            if cache is not None:
-                key = _get_cache_key(path, query_params)
-                cache[key] = response_data
-
-            return ServerResponse(**response_data)
+    return ServerResponse(**response_data)
 
 routes = [
     Route("/{rest_of_path:path}", endpoint=serve, methods=['GET']),
