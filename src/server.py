@@ -46,7 +46,7 @@ async def serve(request):
     for _ in range(3):
 
         async with client_response:
-            if client_response.status == 429:
+            if client_response.status in (429, 500):
                 await asyncio.sleep(5)
                 continue
 
